@@ -1,0 +1,46 @@
+# Whatsapp-bot
+git clone https://github.com/EtWannn/whatsapp-bot.git
+cd whatsapp-bot
+npm init -y
+npm install @whiskeysockets/baileys qrcode-terminal
+nano index.js
+const { makeWASocket, useMultiFileAuthState } = require("@whiskeysockets/baileys");
+const qrcode = require("qrcode-terminal");
+
+async function connectToWhatsApp() {
+    const { state, saveCreds } = await useMultiFileAuthState("auth_info");
+    const sock = makeWASocket({
+        auth: state,
+        printQRInTerminal: true // QR akan muncul di terminal
+    });
+
+    sock.ev.on("creds.update", saveCreds);
+
+    sock.ev.on("connection.update", (update) => {
+        const { connection } = update;
+        if (connection === "open") {
+            console.log("✅ Bot WhatsApp Terhubung!");
+        } else if (connection === "close") {
+            console.log("❌ Bot Terputus! Coba jalankan ulang.");
+        }
+    });
+
+    sock.ev.on("messages.upsert", async ({ messages }) => {
+        const msg = messages[0];
+        if (!msg.message) return;
+
+        const sender = msg.key.remoteJid;
+        const messageText = msg.message.conversation || msg.message.extendedTextMessage?.text;
+
+        console.log(`📩 Pesan dari ${sender}: ${messageText}`);
+
+        if (messageText === "halo") {
+            await sock.sendMessage(sender, { text: "Halo! Saya bot WhatsApp." });
+        } else {
+            await sock.sendMessage(sender, { text: `Kamu berkata: ${messageText}` });
+        }
+    });
+}
+
+connectToWhatsApp();
+node index.js
